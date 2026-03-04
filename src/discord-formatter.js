@@ -1,63 +1,53 @@
 // src/discord-formatter.js
 // Claude Code stream-json 이벤트를 Discord 마크다운으로 변환
-// partial messages 지원: 블록 인덱스 추적으로 중복 방지
+// stream_event (text_delta)로 실시간 텍스트 스트리밍
+// assistant 이벤트에서 tool_use 블록 추출 (완전한 input 포함)
 
-// 에이전트별 상태 추적
-// agentKey → { blockCount, textByIndex: Map<index, lastText> }
-const agentState = new Map();
-
-function getState(agentKey) {
-  if (!agentState.has(agentKey)) {
-    agentState.set(agentKey, { blockCount: 0, textByIndex: new Map() });
-  }
-  return agentState.get(agentKey);
-}
+// 텍스트가 stream_event로 이미 스트리밍되었는지 추적
+const hasStreamedText = new Map();
 
 function formatEvent(agentKey, event) {
   if (!event) return null;
 
-  // assistant 텍스트 응답 (partial messages 포함)
-  if (event.type === 'assistant' && event.message?.content) {
-    const state = getState(agentKey);
-    const blocks = event.message.content;
-    const parts = [];
+  // ── stream_event: 실시간 토큰 스트리밍 ──
+  if (event.type === 'stream_event' && event.event) {
+    const se = event.event;
 
-    for (let i = 0; i < blocks.length; i++) {
-      const block = blocks[i];
-
-      if (block.type === 'thinking') continue;
-
-      if (block.type === 'text' && block.text) {
-        const prevText = state.textByIndex.get(i) || '';
-        if (block.text.startsWith(prevText) && block.text.length > prevText.length) {
-          // 기존 텍스트에 이어붙는 partial update
-          const newPart = block.text.substring(prevText.length);
-          state.textByIndex.set(i, block.text);
-          if (newPart.trim()) parts.push(newPart);
-        } else if (block.text !== prevText) {
-          // 완전히 새로운 텍스트
-          state.textByIndex.set(i, block.text);
-          if (block.text.trim()) parts.push(block.text);
-        }
-      }
-
-      if (block.type === 'tool_use') {
-        // 새 블록일 때만 포맷 (이미 처리한 인덱스는 스킵)
-        if (i >= state.blockCount) {
-          parts.push(formatToolUse(block));
-        }
-      }
+    // 텍스트 delta → 즉시 push (버퍼가 2초 배치)
+    if (se.type === 'content_block_delta' && se.delta?.type === 'text_delta' && se.delta.text) {
+      hasStreamedText.set(agentKey, true);
+      return { type: 'text', content: se.delta.text };
     }
 
-    // 처리된 블록 수 갱신
-    state.blockCount = blocks.length;
+    return null;
+  }
+
+  // ── assistant: 완성된 메시지 (턴별 1회) ──
+  if (event.type === 'assistant' && event.message?.content) {
+    const streamed = hasStreamedText.get(agentKey);
+    hasStreamedText.delete(agentKey);
+
+    const parts = [];
+    for (const block of event.message.content) {
+      if (block.type === 'thinking') continue;
+
+      // 텍스트: stream_event로 이미 보냈으면 스킵
+      if (block.type === 'text' && block.text && !streamed) {
+        if (block.text.trim()) parts.push(block.text);
+      }
+
+      // tool_use: 완전한 input으로 포맷
+      if (block.type === 'tool_use') {
+        parts.push(formatToolUse(block));
+      }
+    }
 
     return parts.length > 0 ? { type: 'text', content: parts.join('\n') } : null;
   }
 
-  // result 이벤트: 턴 완료
+  // ── result: 턴 완료 ──
   if (event.type === 'result') {
-    resetTracking(agentKey);
+    hasStreamedText.delete(agentKey);
 
     if (event.subtype === 'error_max_turns') {
       return { type: 'error', content: '최대 턴 수 초과' };
@@ -68,7 +58,7 @@ function formatEvent(agentKey, event) {
     return null;
   }
 
-  // 시스템 init
+  // ── system init ──
   if (event.type === 'system' && event.subtype === 'init') {
     return { type: 'system', content: `세션 시작 (${event.session_id?.substring(0, 8)}...)` };
   }
@@ -110,7 +100,7 @@ function truncate(str, max) {
 }
 
 function resetTracking(agentKey) {
-  agentState.delete(agentKey);
+  hasStreamedText.delete(agentKey);
 }
 
 module.exports = { formatEvent, formatToolUse, truncate, resetTracking };
