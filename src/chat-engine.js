@@ -97,6 +97,7 @@ class ChatEngine extends EventEmitter {
     this.participants = participants || [...config.CHAT_CONFIG.defaultParticipants];
     this.turnIndex = 0;
     this.turnCount = 0;
+    this.startedAt = Date.now();
     this.maxTurns = options.maxTurns || config.CHAT_CONFIG.maxTurnsPerConversation;
 
     // 가상 에이전트 등록
@@ -246,9 +247,11 @@ class ChatEngine extends EventEmitter {
     this.turnCount++;
     this._recordTurn();
 
-    // 종료 조건 — 최소 턴 보호
-    const minTurns = config.CHAT_CONFIG.minTurnsBeforeEnd || 8;
-    if (text.includes('[대화 끝]') && this.turnCount >= minTurns) {
+    // 종료 조건 — 턴 수 + 시간 이중 보호
+    const minTurns = config.CHAT_CONFIG.minTurnsBeforeEnd || 500;
+    const minMinutes = config.CHAT_CONFIG.minMinutesBeforeEnd || 25;
+    const elapsedMinutes = (Date.now() - this.startedAt) / 60000;
+    if (text.includes('[대화 끝]') && this.turnCount >= minTurns && elapsedMinutes >= minMinutes) {
       await this._endConversation('자연 종료');
       return;
     }
@@ -342,7 +345,8 @@ class ChatEngine extends EventEmitter {
 - 다른 사람이 한 말에 반응하기 — 동의, 반박, 추가 질문, 내 관점 제시
 - 대화를 자연스럽게 이어가기. 의견만 말하고 멈추지 말 것
 - 질문을 던지거나 다른 의견에 도전하며 토론을 계속하기
-- 충분히 오래 대화한 후 주제가 완전히 소진되었을 때만 "[대화 끝]" 포함`;
+- 이 대화는 최소 30분 이상 진행됩니다. "[대화 끝]"을 절대 일찍 쓰지 마세요
+- 주제가 소진되면 관련 새 주제로 자연스럽게 전환하세요`;
 
     if (lastMsg) {
       prompt += `\n\n${lastMsg.name}의 말: "${lastMsg.text}"`;

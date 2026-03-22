@@ -87,7 +87,8 @@ const CHAT_CONFIG = {
   maxConversationsPerDay: 0,    // 0 = 무제한
   cooldownMinutes: 0,
   maxDailyTurns: 0,             // 0 = 무제한
-  minTurnsBeforeEnd: 8,          // [대화 끝] 허용 최소 턴 수
+  minTurnsBeforeEnd: 500,         // [대화 끝] 허용 최소 턴 수
+  minMinutesBeforeEnd: 25,        // [대화 끝] 허용 최소 경과 시간(분)
   defaultParticipants: ['sambong', 'munsu', 'jungyoung', 'chukgyeong'],
   schedule: { morning: 9, evening: 18 },
   // 자율 대화: 활동 시간대에 랜덤 간격으로 자동 시작
