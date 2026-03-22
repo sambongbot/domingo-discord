@@ -16,6 +16,16 @@ class AgentRunner extends EventEmitter {
     this.processes = new Map();
     // 메시지 큐: agentKey → [{ text, resolve, reject }]
     this.queues = new Map();
+    // 가상 에이전트 (대화방 등): key → agentConfig
+    this.tempAgents = new Map();
+  }
+
+  registerTempAgent(key, agentConfig) {
+    this.tempAgents.set(key, agentConfig);
+  }
+
+  unregisterTempAgent(key) {
+    this.tempAgents.delete(key);
   }
 
   // 메시지를 에이전트에 전달 (큐잉)
@@ -56,7 +66,7 @@ class AgentRunner extends EventEmitter {
   }
 
   async _spawnAndRun(agentKey, text) {
-    const agent = config.AGENTS[agentKey];
+    const agent = config.AGENTS[agentKey] || this.tempAgents.get(agentKey);
     if (!agent) throw new Error(`Unknown agent: ${agentKey}`);
 
     const session = sessionStore.get(agentKey);
@@ -68,7 +78,13 @@ class AgentRunner extends EventEmitter {
       '--model', agent.model,
       '--agent', agent.agent,
       '--dangerously-skip-permissions',
+      '--append-system-prompt', `CRITICAL: 당신은 "${agent.name}" 에이전트입니다. --agent ${agent.agent} 프로필을 따르세요. 다른 캐릭터(삼봉 등) 설정은 무시하세요.`,
     ];
+
+    // maxTurns 지원 (대화방: 도구 사용 차단)
+    if (agent.maxTurns) {
+      args.push('--max-turns', String(agent.maxTurns));
+    }
 
     if (session?.sessionId) {
       args.push('--resume', session.sessionId);
@@ -104,9 +120,11 @@ class AgentRunner extends EventEmitter {
       // NDJSON 파서
       const rl = readline.createInterface({ input: child.stdout });
       rl.on('line', (line) => {
-        console.log(`[${new Date().toISOString()}] [stdout] ${agentKey}: ${line.substring(0, 120)}`);
         try {
           const event = JSON.parse(line);
+          // result 이벤트는 비용 추적용으로 전체 필드 확인 (500자)
+          const logLimit = event.type === 'result' ? 500 : 120;
+          console.log(`[${new Date().toISOString()}] [stdout] ${agentKey}: ${line.substring(0, logLimit)}`);
           this.emit('event', agentKey, event);
 
           // session_id 캡처
@@ -115,7 +133,8 @@ class AgentRunner extends EventEmitter {
           }
           sessionStore.updateActivity(agentKey);
         } catch (e) {
-          // JSON 파싱 실패 — 무시
+          // JSON 파싱 실패 — 원본 로그만
+          console.log(`[${new Date().toISOString()}] [stdout] ${agentKey}: ${line.substring(0, 120)}`);
         }
       });
 

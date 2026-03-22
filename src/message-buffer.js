@@ -3,14 +3,15 @@ const config = require('./config');
 
 class MessageBuffer {
   constructor() {
-    // agentKey → { buffer, lastType, discordMessage, timer, thread }
+    // agentKey → { buffer, lastType, discordMessage, timer, thread, sendFn, editFn, webhook, currentSender }
     this.buffers = new Map();
   }
 
   // thread: Discord ThreadChannel에 전송하는 함수를 인자로 받음
-  // sendFn: async (thread, content) => Discord.Message   (새 메시지 전송)
-  // editFn: async (message, content) => void              (기존 메시지 수정)
-  init(agentKey, thread, sendFn, editFn) {
+  // sendFn: async (thread, content, senderName?, senderAvatar?) => Discord.Message
+  // editFn: async (message, content) => void
+  // options: { webhook: boolean }
+  init(agentKey, thread, sendFn, editFn, options = {}) {
     this.buffers.set(agentKey, {
       buffer: '',
       lastType: null,
@@ -19,12 +20,20 @@ class MessageBuffer {
       thread,
       sendFn,
       editFn,
+      webhook: options.webhook || false,
+      currentSender: null,  // { name, avatar } — Webhook 모드에서 현재 발화자
     });
   }
 
-  async push(agentKey, type, content) {
+  async push(agentKey, type, content, sender = null) {
     const state = this.buffers.get(agentKey);
     if (!state) return;
+
+    // Webhook 모드: sender 변경 시 즉시 플러시 (새 아바타로 전환)
+    if (state.webhook && sender && state.currentSender?.name !== sender.name) {
+      await this._flush(agentKey);
+      state.currentSender = sender;
+    }
 
     // 타입 변경 시 즉시 플러시
     if (state.lastType && state.lastType !== type) {
@@ -38,7 +47,11 @@ class MessageBuffer {
         ? content.substring(0, config.DISCORD_MAX_LENGTH) + '\n... (생략)'
         : content;
       if (truncated.trim()) {
-        await state.sendFn(state.thread, `\`\`\`\n${truncated}\n\`\`\``);
+        await state.sendFn(
+          state.thread, `\`\`\`\n${truncated}\n\`\`\``,
+          state.currentSender?.name,
+          state.currentSender?.avatar
+        );
       }
       return;
     }
@@ -46,14 +59,22 @@ class MessageBuffer {
     // error도 새 메시지
     if (type === 'error') {
       await this._flush(agentKey);
-      await state.sendFn(state.thread, `❌ ${content}`);
+      await state.sendFn(
+        state.thread, `❌ ${content}`,
+        state.currentSender?.name,
+        state.currentSender?.avatar
+      );
       return;
     }
 
     // system도 새 메시지
     if (type === 'system') {
       await this._flush(agentKey);
-      await state.sendFn(state.thread, `🔄 ${content}`);
+      await state.sendFn(
+        state.thread, `🔄 ${content}`,
+        state.currentSender?.name,
+        state.currentSender?.avatar
+      );
       return;
     }
 
@@ -91,8 +112,19 @@ class MessageBuffer {
     state.lastType = null;
 
     try {
+      // Webhook 모드: 항상 새 메시지 (edit 제한 때문)
+      if (state.webhook) {
+        await state.sendFn(
+          state.thread, content,
+          state.currentSender?.name,
+          state.currentSender?.avatar
+        );
+        state.discordMessage = null;
+        return;
+      }
+
+      // 일반 모드: 기존 메시지 edit 시도
       if (state.discordMessage) {
-        // 기존 메시지 수정 시도
         const existing = state.discordMessage.content || '';
         const merged = existing + content;
         if (merged.length <= config.DISCORD_MAX_LENGTH) {
@@ -109,8 +141,12 @@ class MessageBuffer {
       console.error(`[message-buffer] flush 오류 (${agentKey}):`, e.message);
       // 에러 시 새 메시지 시도
       try {
-        const msg = await state.sendFn(state.thread, content);
-        state.discordMessage = msg;
+        const msg = await state.sendFn(
+          state.thread, content,
+          state.currentSender?.name,
+          state.currentSender?.avatar
+        );
+        state.discordMessage = state.webhook ? null : msg;
       } catch (e2) {
         console.error(`[message-buffer] 재시도 실패:`, e2.message);
       }
@@ -129,6 +165,7 @@ class MessageBuffer {
       state.buffer = '';
       state.lastType = null;
       state.discordMessage = null;
+      state.currentSender = null;
     }
   }
 

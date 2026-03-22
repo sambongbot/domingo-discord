@@ -1,0 +1,118 @@
+{
+  "sambong": {
+    "total": {
+      "turns": 53,
+      "duration_ms": 768472,
+      "requests": 41,
+      "input_tokens": 984,
+      "output_tokens": 19331
+    },
+    "daily": {
+      "2026-03-15": {
+        "turns": 7,
+        "duration_ms": 86512,
+        "requests": 7,
+        "input_tokens": 21,
+        "output_tokens": 2945
+      },
+      "2026-03-16": {
+        "turns": 19,
+        "duration_ms": 306927,
+        "requests": 15,
+        "input_tokens": 51,
+        "output_tokens": 6119
+      },
+      "2026-03-19": {
+        "turns": 25,
+        "duration_ms": 356149,
+        "requests": 17,
+        "input_tokens": 906,
+        "output_tokens": 9923
+      },
+      "2026-03-21": {
+        "turns": 2,
+        "duration_ms": 18884,
+        "requests": 2,
+        "input_tokens": 6,
+        "output_tokens": 344
+      }
+    },
+    "lastUpdated": "2026-03-21T10:48:37.102Z"
+  },
+  "chat_sambong": {
+    "total": {
+      "turns": 66,
+      "duration_ms": 510116,
+      "requests": 64,
+      "input_tokens": 640,
+      "output_tokens": 43111
+    },
+    "daily": {
+      "2026-03-22": {
+        "turns": 66,
+        "duration_ms": 510116,
+        "requests": 64,
+        "input_tokens": 640,
+        "output_tokens": 43111
+      }
+    },
+    "lastUpdated": "2026-03-22T03:29:16.680Z"
+  },
+  "chat_munsu": {
+    "total": {
+      "turns": 43,
+      "duration_ms": 369819,
+      "requests": 42,
+      "input_tokens": 420,
+      "output_tokens": 29405
+    },
+    "daily": {
+      "2026-03-22": {
+        "turns": 43,
+        "duration_ms": 369819,
+        "requests": 42,
+        "input_tokens": 420,
+        "output_tokens": 29405
+      }
+    },
+    "lastUpdated": "2026-03-22T03:29:30.256Z"
+  },
+  "chat_jungyoung": {
+    "total": {
+      "turns": 38,
+      "duration_ms": 300052,
+      "requests": 38,
+      "input_tokens": 380,
+      "output_tokens": 25086
+    },
+    "daily": {
+      "2026-03-22": {
+        "turns": 38,
+        "duration_ms": 300052,
+        "requests": 38,
+        "input_tokens": 380,
+        "output_tokens": 25086
+      }
+    },
+    "lastUpdated": "2026-03-22T03:28:44.024Z"
+  },
+  "chat_chukgyeong": {
+    "total": {
+      "turns": 35,
+      "duration_ms": 335440,
+      "requests": 35,
+      "input_tokens": 350,
+      "output_tokens": 28349
+    },
+    "daily": {
+      "2026-03-22": {
+        "turns": 35,
+        "duration_ms": 335440,
+        "requests": 35,
+        "input_tokens": 350,
+        "output_tokens": 28349
+      }
+    },
+    "lastUpdated": "2026-03-22T03:29:01.445Z"
+  }
+}
