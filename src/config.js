@@ -2,8 +2,9 @@
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-const CLAUDE_PATH = '/opt/homebrew/bin/claude';
-const HOME_DIR = '/Users/sambong';
+const os = require('os');
+const CLAUDE_PATH = process.env.CLAUDE_PATH || 'claude';
+const HOME_DIR = os.homedir();
 
 // 아바타 URL — 캐릭터별 완전히 다른 스타일 (디스코드에서 즉시 구분)
 const AVATARS = {

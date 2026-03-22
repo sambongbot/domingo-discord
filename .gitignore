@@ -1,4 +1,6 @@
 node_modules/
 .env
-data/sessions.json
+data/
 logs/
+*.plist
+.DS_Store
