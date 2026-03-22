@@ -312,7 +312,7 @@ class ChatEngine extends EventEmitter {
 
     let historyText = '';
     if (this.history.length > 0) {
-      const recent = this.history.slice(-10);
+      const recent = this.history.slice(-20);
       historyText = recent.map(h => `${h.name}: "${h.text}"`).join('\n');
     }
 
@@ -339,14 +339,15 @@ class ChatEngine extends EventEmitter {
 
     prompt += `
 [규칙]
-- 캐릭터 유지, 1-3문장 짧게
+- 1-3문장, 핵심만 짧게
 - 도구 사용 금지 (대화만)
 - 전하(오세용 대표님)께서 말씀하시면 최우선으로 응답
-- 다른 사람이 한 말에 반응하기 — 동의, 반박, 추가 질문, 내 관점 제시
-- 대화를 자연스럽게 이어가기. 의견만 말하고 멈추지 말 것
-- 질문을 던지거나 다른 의견에 도전하며 토론을 계속하기
-- 이 대화는 최소 30분 이상 진행됩니다. "[대화 끝]"을 절대 일찍 쓰지 마세요
-- 주제가 소진되면 관련 새 주제로 자연스럽게 전환하세요`;
+- 행동 묘사 절대 금지 ("노트북을 펼치며", "시계를 본다" 등 소설 쓰기 금지)
+- 의견, 논리, 근거만 말하기. 감정 표현이나 연기하지 말 것
+- 상대 의견에 구체적으로 반박하거나 발전시키기. 단순 동의 금지
+- 새로운 관점, 데이터, 사례를 들어 토론 깊이를 높이기
+- 주제가 소진되면 관련 새 주제로 자연스럽게 전환
+- "[대화 끝]"은 충분히 대화한 후에만 사용`;
 
     if (lastMsg) {
       prompt += `\n\n${lastMsg.name}의 말: "${lastMsg.text}"`;

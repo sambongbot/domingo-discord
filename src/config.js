@@ -83,7 +83,7 @@ const AGENTS = {
 
 // 대화방 설정
 const CHAT_CONFIG = {
-  model: 'haiku',
+  model: 'sonnet',
   maxTurnsPerConversation: 0,   // 0 = 무제한, [대화 끝]으로만 종료
   maxConversationsPerDay: 0,    // 0 = 무제한
   cooldownMinutes: 0,
